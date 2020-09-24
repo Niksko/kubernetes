@@ -564,6 +564,13 @@ func (config *inClusterClientConfig) ClientConfig() (*restclient.Config, error) 
 		if certificateAuthorityFile := config.overrides.ClusterInfo.CertificateAuthority; len(certificateAuthorityFile) > 0 {
 			icc.TLSClientConfig.CAFile = certificateAuthorityFile
 		}
+		if len(config.overrides.Timeout) > 0 {
+			timeout, err := ParseTimeout(config.overrides.Timeout)
+			if err != nil {
+				return nil, err
+			}
+			icc.Timeout = timeout
+		}
 	}
 
 	return icc, err

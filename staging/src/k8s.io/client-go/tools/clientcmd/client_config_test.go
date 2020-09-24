@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	restclient "k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -933,6 +934,49 @@ func TestCleanANSIEscapeCodes(t *testing.T) {
 
 			if actualOut := cleanANSIEscapeCodes(test.in); test.out != actualOut {
 				t.Errorf("expected %q, actual %q", test.out, actualOut)
+			}
+		})
+	}
+}
+
+func Test_inClusterClientConfig_ClientConfig(t *testing.T) {
+	type fields struct {
+		overrides               *ConfigOverrides
+		inClusterConfigProvider func() (*restclient.Config, error)
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		want    *restclient.Config
+		wantErr bool
+	}{
+		{
+			name:    "HonourTimeout",
+			fields:  fields{
+				&ConfigOverrides{
+					Timeout:         "10s",
+				},
+				func() (*restclient.Config, error) {
+					return &restclient.Config{}, nil
+				},
+			},
+			want:    &restclient.Config{Timeout: time.Duration(10) * time.Second},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &inClusterClientConfig{
+				overrides:               tt.fields.overrides,
+				inClusterConfigProvider: tt.fields.inClusterConfigProvider,
+			}
+			got, err := config.ClientConfig()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ClientConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ClientConfig() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
